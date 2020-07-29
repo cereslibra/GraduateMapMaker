@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+	    <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+	    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+		<title>毕业数据可视化</title>
+		<link rel="stylesheet" href="css/bootstrap.min.css" />
+		<link rel="stylesheet" href="css/app.css" />
+	</head>
+	
+	<body class="bg01">
+		<header class="header">
+			<h3>毕业数据可视化</h3>
+		</header>
+		
+		<div class="wrapper">
+			<div class="container-fluid">
+				<div class="row fill-h">
+					<div class="col-lg-3 fill-h">
+						<div class="xpanel-wrapper xpanel-wrapper-2">
+							<div class="xpanel">
+								<!-- 地图飞线 -->
+								<div class="fill-h" id="flyMap"></div>
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-6 fill-h">
+						<div class="xpanel-wrapper xpanel-wrapper-1">
+							<div class="xpanel">
+								<!-- 地图散点 -->
+								<div class="fill-h" id="scatterMap"></div>
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-3 fill-h">
+						<div class="xpanel-wrapper xpanel-wrapper-3">
+							<div class="xpanel">
+								<!-- 省份地图 -->
+								<div class="fill-h" id="provinceMap"></div>
+							</div>
+						</div>
+						<div class="xpanel-wrapper xpanel-wrapper-3">
+							<div class="xpanel">
+								<!-- 城市地图 -->
+								<div class="fill-h" id="cityMap"></div>
+							</div>
+						</div>
+						<div class="xpanel-wrapper xpanel-wrapper-3">
+							<div class="xpanel">
+								<!-- 区县地图 -->
+								<div class="fill-h" id="countyMap"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<script type="text/javascript" src="js/jquery-3.3.1.min.js"></script>
+		<script type="text/javascript" src="js/echarts-3.8.5.min.js"></script>
+		<script type="text/javascript" src="js/echarts-map-world.js"></script>
+		<script type="text/javascript" src="js/echarts-map-china.js"></script>
+		<script type="text/javascript" src="js/echarts-china-provinces/jiangsu.js"></script>
+		<script type="text/javascript" src="js/echarts-china-cities/jiang1_su1_su1_zhou1.js"></script>
+		<script type="text/javascript" src="js/echarts-china-counties/jiang1su1_su1zhou1_kun1shan1shi4.js"></script>
+		<script type="text/javascript">
+			$(function() {
+				/******************* 地图飞线 ******************/
+				//初始化echarts实例
+				const flyMap = echarts.init(document.getElementById("flyMap"));
+		        //城市经纬度
+		        const originName = 'replaceOrigin';
+		        const flyGeo = {
+		        	replaceFlyGeo
+		        };
+		        //飞线数据
+		        var flyVal = [
+		        		replaceFlyVal
+		        ];
+		        //数据转换，转换后格式：[{fromName:'cityName', toName:'cityName', coords:[[lng, lat], [lng, lat]]}, {...}]
+		        const convertFlyData = function(data) {
+		            let res = [];
+		            for(let i=0;i<data.length;i++) {
+		                let dataItem = data[i];
+		                let toCoord = flyGeo[dataItem[0].name];
+		                let fromCoord = flyGeo[dataItem[1].name];
+		                if(fromCoord && toCoord) {
+		                    res.push({
+		                        fromName: dataItem[1].name, 
+		                        toName: dataItem[0].name, 
+		                        coords: [fromCoord, toCoord]
+		                    });
+		                }
+		            }
+		            return res;
+		        };
+		        //报表配置
+		        const flySeries = [];
+		        [[originName, flyVal]].forEach(function(item, i) {
+					flySeries.push({   
+				        name: item[0],
+				        type: 'lines',
+				        zlevel: 1,
+				        symbol: ['none', 'none'],
+				        symbolSize: 0,
+				        effect: { //特效线配置
+				            show: true,
+				            period: 5, //特效动画时间，单位s
+				            trailLength: 0.1, //特效尾迹的长度，从0到1
+				            symbol: 'arrow',
+				            symbolSize: 5
+				        },
+				        lineStyle: {
+				            normal: {
+				                color: '#f19000',
+				                width: 1,
+				                opacity: 0.6,
+				                curveness: 0.2 //线的平滑度
+				            }
+				        },
+				        data: convertFlyData(item[1])
+				    }, {
+				        name: item[0],
+				        type: 'effectScatter',
+				        coordinateSystem: 'geo',
+				        zlevel: 2,
+				        rippleEffect: { //涟漪特效
+				            period: 5, //特效动画时长 
+				            scale: 4, //波纹的最大缩放比例
+				            brushType: 'stroke' //波纹的绘制方式：stroke | fill
+				        },
+				        label: {
+				            normal: {
+				                show: false,
+				                position: 'right',
+				                formatter: '{b}'
+				            }
+				        },
+				        symbol: 'circle',
+				        symbolSize: function (val) {
+				        	//根据某项数据值设置符号大小
+				            return val[2] / 10; 
+				        },
+				        itemStyle: {
+				            normal: {
+				            	color: '#f19000'
+				            }
+				        },
+				        data: item[1].map(function(dataItem) {
+				            return {
+				                name: dataItem[1].name,
+				                value: flyGeo[dataItem[1].name].concat([dataItem[1].value])
+				            };
+				        })
+				    }, { //与上层的点叠加
+				    	name: item[0],
+				        type: 'scatter',
+				        coordinateSystem: 'geo',
+				        zlevel: 3,
+				        symbol: 'circle',
+				        symbolSize: function (val) {
+				        	//根据某项数据值设置符号大小
+				            return val[2] / 15; 
+				        },
+				        itemStyle: {
+				            normal: {
+				            	color: '#f00'
+				            }
+				        },
+				        data: item[1].map(function(dataItem) {
+				            return {
+				                name: dataItem[1].name,
+				                value: flyGeo[dataItem[1].name].concat([dataItem[1].value])
+				            };
+				        })
+				    });
+		        });
+	
+				//报表配置项
+				const flyMapOpt = {
+					title: {
+						show: false,
+						text: '地图飞线',
+						x: 'center',
+						textStyle: {
+							color: '#fff'
+						}
+					},
+	                tooltip: {
+	                    trigger: 'item',
+	                    formatter: function(params) {
+	                        if(params.value) {
+	                            return params.name + ' : ' + params.value[2];
+	                        }else {
+	                            return params.name;
+	                        }
+	                    }
+	                },
+				    geo: {
+				        map: 'china',
+				        roam: false, //开启鼠标缩放和漫游
+				        zoom: 1, //地图缩放级别
+						selectedMode: false, //选中模式：single | multiple
+						left: 0,
+						right: 0,
+						top: 0,
+						bottom: 0,
+						layoutCenter: ['50%', '50%'], //设置后left/right/top/bottom等属性无效
+						layoutSize: '100%', //保持地图宽高比
+				        label: {
+				            emphasis: {
+				                show: false
+				            }
+				        },
+				        itemStyle: {
+				            normal: {
+				                areaColor: '#101f32',
+				                borderWidth: 1.1,
+				                borderColor: '#43d0d6'
+				            },
+				            emphasis: {
+				                areaColor: '#069'
+				            }
+				        }
+				    },
+				    series: flySeries
+				};
+				//渲染报表
+				flyMap.setOption(flyMapOpt);
+				
+				/***************** 地图散点 ******************/
+				//初始化echarts实例
+				const scatterMap = echarts.init(document.getElementById("scatterMap"));
+				//城市经纬度
+				const scatterGeo = {
+					replaceScatterGeo
+				};
+				//城市数据
+				const scatterVal = [
+						replaceScatterVal
+				];
+				//数据转换，转换后的格式：[{name: 'cityName', value: [lng, lat, val]}, {...}]
+				const convertScatterData = function(data) {
+				    let res = [];
+				    for(let i=0;i<data.length;i++) {
+				        let geoCoord = scatterGeo[data[i].name];
+				        if(geoCoord) {
+				            res.push({
+				                name: data[i].name,
+				                value: geoCoord.concat(data[i].value)
+				            });
+				        }
+				    }
+				    return res;
+				};
+				//地图配置项
+				const sactterMapOpt = {
+					title: {
+						text: '各学校分布图',
+						x: 'center',
+						textStyle: {
+							color: '#fff'
+						}
+					},
+					legend: {
+						data: ['各校名单'], //与series的name属性对应
+				        orient: 'vertical',
+				        y: 'bottom',
+				        x: 'right',
+				        textStyle: {
+				            color: '#fff'
+				        }
+				    },
+					tooltip: {
+				        trigger: 'item',
+				        formatter: function(params) {
+				            return params.name + ' : ' + params.value[2];
+				        }
+				    },
+					geo: {
+				        map: 'china',
+				        roam: false, //开启鼠标缩放和漫游
+				        zoom: 1, //地图缩放级别
+						selectedMode: false, //选中模式：single | multiple
+						left: 0,
+						right: 0,
+						top: 0,
+						bottom: 0,
+						layoutCenter: ['50%', '50%'], //设置后left/right/top/bottom等属性无效
+						layoutSize: '100%',
+				        label: {
+				            emphasis: {
+				                show: false
+				            }
+				        },
+				        itemStyle: {
+				            normal: {
+				                areaColor: '#101f32',
+				                borderWidth: 1.1,
+				                borderColor: '#43d0d6'
+				            },
+				            emphasis: {
+				                areaColor: '#069'
+				            }
+				        }
+				    },
+				    series: [{
+			            name: 'PM2.5',
+			            type: 'scatter',
+			            coordinateSystem: 'geo',
+			            symbolSize: 12,
+			            label: {
+			                normal: {
+			                    show: false
+			                },
+			                emphasis: {
+			                    show: false
+			                }
+			            },
+			            itemStyle: {
+			                emphasis: {
+			                    borderColor: '#fff',
+			                    borderWidth: 1
+			                }
+			            },
+			            data: convertScatterData(scatterVal)
+			        }]
+				};
+				//渲染报表
+				scatterMap.setOption(sactterMapOpt);
+				
+				/******************* 世界地图 ******************/
+				//初始化echarts实例
+				const worldMap = echarts.init(document.getElementById("worldMap"));
+				const worldMapOpt = {
+					geo: {
+						map: 'world',
+				        roam: false, //开启鼠标缩放和漫游
+				        zoom: 1, //地图缩放级别
+						selectedMode: false, //选中模式：single | multiple
+						left: 0,
+						right: 0,
+						top: 0,
+						bottom: 0,
+						layoutCenter: ['50%', '50%'], //设置后left/right/top/bottom等属性无效
+						layoutSize: '100%',
+				        label: {
+				            emphasis: {
+				                show: false
+				            }
+				        },
+				        itemStyle: {
+				            normal: {
+				                areaColor: '#101f32',
+				                borderWidth: 1.1,
+				                borderColor: '#43d0d6'
+				            },
+				            emphasis: {
+				                areaColor: '#069'
+				            }
+				        }
+					}
+				};
+				worldMap.setOption(worldMapOpt);
+
+				/********** 浏览器窗口改变时，重置报表大小 ****************/
+				window.onresize = function() {
+					flyMap.resize();
+					scatterMap.resize();
+					worldMap.resize();
+					provinceMap.resize();
+					cityMap.resize();
+					countyMap.resize();
+				}
+			});
+		</script>
+	</body>
+</html>
